@@ -1,4 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 #ifndef __NET_PKT_SCHED_H
 #define __NET_PKT_SCHED_H
 
@@ -11,7 +16,6 @@
 #include <uapi/linux/pkt_sched.h>
 
 #define DEFAULT_TX_QUEUE_LEN	1000
-#define STAB_SIZE_LOG_MAX	30
 
 struct qdisc_walker {
 	int	stop;

@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Atmel ADC driver for SAMA5D2 devices and compatible.
@@ -1369,8 +1374,7 @@ static int at91_adc_read_info_raw(struct iio_dev *indio_dev,
 		*val = st->conversion_value;
 		ret = at91_adc_adjust_val_osr(st, val);
 		if (chan->scan_type.sign == 's')
-			*val = sign_extend32(*val,
-					     chan->scan_type.realbits - 1);
+			*val = sign_extend32(*val, 11);
 		st->conversion_done = false;
 	}
 

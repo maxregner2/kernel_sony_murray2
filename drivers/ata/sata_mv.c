@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * sata_mv.c - Marvell SATA support
@@ -3892,8 +3897,8 @@ static int mv_chip_id(struct ata_host *host, unsigned int board_idx)
 		break;
 
 	default:
-		dev_alert(host->dev, "BUG: invalid board index %u\n", board_idx);
-		return -EINVAL;
+		dev_err(host->dev, "BUG: invalid board index %u\n", board_idx);
+		return 1;
 	}
 
 	hpriv->hp_flags = hp_flags;

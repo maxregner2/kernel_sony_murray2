@@ -30,6 +30,11 @@
  * SOFTWARE.
  *
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 #include <linux/bpf.h>
 #include <linux/etherdevice.h>
@@ -370,9 +375,6 @@ mlx4_en_filter_rfs(struct net_device *net_dev, const struct sk_buff *skb,
 	__be16 dst_port;
 	int nhoff = skb_network_offset(skb);
 	int ret = 0;
-
-	if (skb->encapsulation)
-		return -EPROTONOSUPPORT;
 
 	if (skb->protocol != htons(ETH_P_IP))
 		return -EPROTONOSUPPORT;
@@ -2281,14 +2283,9 @@ int mlx4_en_try_alloc_resources(struct mlx4_en_priv *priv,
 				bool carry_xdp_prog)
 {
 	struct bpf_prog *xdp_prog;
-	int i, t, ret;
+	int i, t;
 
-	ret = mlx4_en_copy_priv(tmp, priv, prof);
-	if (ret) {
-		en_warn(priv, "%s: mlx4_en_copy_priv() failed, return\n",
-			__func__);
-		return ret;
-	}
+	mlx4_en_copy_priv(tmp, priv, prof);
 
 	if (mlx4_en_alloc_resources(tmp)) {
 		en_warn(priv,

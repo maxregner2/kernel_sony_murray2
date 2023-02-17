@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Copyright 2016,2017 IBM Corporation.
@@ -990,8 +995,7 @@ static int xive_get_irqchip_state(struct irq_data *data,
 		 * interrupt to be inactive in that case.
 		 */
 		*state = (pq != XIVE_ESB_INVALID) && !xd->stale_p &&
-			(xd->saved_p || (!!(pq & XIVE_ESB_VAL_P) &&
-			 !irqd_irq_disabled(data)));
+			(xd->saved_p || !!(pq & XIVE_ESB_VAL_P));
 		return 0;
 	default:
 		return -EINVAL;

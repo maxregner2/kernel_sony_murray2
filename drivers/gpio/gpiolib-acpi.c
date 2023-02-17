@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0
 /*
  * ACPI helpers for GPIO API
@@ -953,17 +958,10 @@ int acpi_dev_gpio_irq_get(struct acpi_device *adev, int index)
 			irq_flags = acpi_dev_get_irq_type(info.triggering,
 							  info.polarity);
 
-			/*
-			 * If the IRQ is not already in use then set type
-			 * if specified and different than the current one.
-			 */
-			if (can_request_irq(irq, irq_flags)) {
-				if (irq_flags != IRQ_TYPE_NONE &&
-				    irq_flags != irq_get_trigger_type(irq))
-					irq_set_irq_type(irq, irq_flags);
-			} else {
-				dev_dbg(&adev->dev, "IRQ %d already in use\n", irq);
-			}
+			/* Set type if specified and different than the current one */
+			if (irq_flags != IRQ_TYPE_NONE &&
+			    irq_flags != irq_get_trigger_type(irq))
+				irq_set_irq_type(irq, irq_flags);
 
 			return irq;
 		}

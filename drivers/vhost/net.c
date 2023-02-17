@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (C) 2009 Red Hat, Inc.
  * Author: Michael S. Tsirkin <mst@redhat.com>
@@ -466,7 +471,7 @@ static void vhost_tx_batch(struct vhost_net *net,
 		.num = nvq->batched_xdp,
 		.ptr = nvq->xdp,
 	};
-	int i, err;
+	int err;
 
 	if (nvq->batched_xdp == 0)
 		goto signal_used;
@@ -475,15 +480,6 @@ static void vhost_tx_batch(struct vhost_net *net,
 	err = sock->ops->sendmsg(sock, msghdr, 0);
 	if (unlikely(err < 0)) {
 		vq_err(&nvq->vq, "Fail to batch sending packets\n");
-
-		/* free pages owned by XDP; since this is an unlikely error path,
-		 * keep it simple and avoid more complex bulk update for the
-		 * used pages
-		 */
-		for (i = 0; i < nvq->batched_xdp; ++i)
-			put_page(virt_to_head_page(nvq->xdp[i].data));
-		nvq->batched_xdp = 0;
-		nvq->done_idx = 0;
 		return;
 	}
 

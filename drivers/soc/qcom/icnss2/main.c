@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2015-2020, 2021, The Linux Foundation.
@@ -81,8 +86,6 @@ module_param(qmi_timeout, ulong, 0600);
 #else
 #define WLFW_TIMEOUT                    msecs_to_jiffies(3000)
 #endif
-
-#define ICNSS_RECOVERY_TIMEOUT		60000
 
 static struct icnss_priv *penv;
 static struct work_struct wpss_loader;
@@ -401,17 +404,6 @@ bool icnss_is_fw_down(void)
 		test_bit(ICNSS_REJUVENATE, &priv->state);
 }
 EXPORT_SYMBOL(icnss_is_fw_down);
-
-unsigned long icnss_get_device_config(void)
-{
-	struct icnss_priv *priv = icnss_get_plat_priv();
-
-	if (!priv)
-		return 0;
-
-	return priv->device_config;
-}
-EXPORT_SYMBOL(icnss_get_device_config);
 
 bool icnss_is_rejuvenate(void)
 {
@@ -870,9 +862,6 @@ static int icnss_driver_event_fw_ready_ind(struct icnss_priv *priv, void *data)
 
 	if (!priv)
 		return -ENODEV;
-
-	if (priv->device_id == ADRASTEA_DEVICE_ID)
-		del_timer(&priv->recovery_timer);
 
 	set_bit(ICNSS_FW_READY, &priv->state);
 	clear_bit(ICNSS_MODE_ON, &priv->state);
@@ -1859,9 +1848,6 @@ static int icnss_modem_notifier_nb(struct notifier_block *nb,
 	}
 	icnss_driver_event_post(priv, ICNSS_DRIVER_EVENT_PD_SERVICE_DOWN,
 				ICNSS_EVENT_SYNC, event_data);
-
-	mod_timer(&priv->recovery_timer,
-		  jiffies + msecs_to_jiffies(ICNSS_RECOVERY_TIMEOUT));
 out:
 	icnss_pr_vdbg("Exit %s,state: 0x%lx\n", __func__, priv->state);
 	return NOTIFY_OK;
@@ -2013,6 +1999,16 @@ static int icnss_service_notifier_notify(struct notifier_block *nb,
 	}
 	icnss_pr_info("PD service down, pd_state: %d, state: 0x%lx: cause: %s\n",
 		      *state, priv->state, icnss_pdr_cause[cause]);
+
+	if (*state == USER_PD_STATE_CHANGE) {
+		memset(priv->crash_reason, 0, sizeof(priv->crash_reason));
+		snprintf(priv->crash_reason, sizeof(priv->crash_reason),
+				"PD service down, pd_state: %d, state: 0x%lx: cause: %s\n",
+				*state, priv->state, icnss_pdr_cause[cause]);
+		priv->data_ready = 1;
+		wake_up(&priv->wlan_pdr_debug_q);
+	}
+
 event_post:
 	if (!test_bit(ICNSS_FW_DOWN, &priv->state)) {
 		set_bit(ICNSS_FW_DOWN, &priv->state);
@@ -2030,9 +2026,6 @@ event_post:
 	clear_bit(ICNSS_HOST_TRIGGERED_PDR, &priv->state);
 	icnss_driver_event_post(priv, ICNSS_DRIVER_EVENT_PD_SERVICE_DOWN,
 				ICNSS_EVENT_SYNC, event_data);
-
-	mod_timer(&priv->recovery_timer,
-		  jiffies + msecs_to_jiffies(ICNSS_RECOVERY_TIMEOUT));
 done:
 	if (notification == SERVREG_NOTIF_SERVICE_STATE_UP_V01)
 		clear_bit(ICNSS_FW_DOWN, &priv->state);
@@ -3927,14 +3920,6 @@ static void icnss_init_control_params(struct icnss_priv *priv)
 	}
 }
 
-static void icnss_read_device_configs(struct icnss_priv *priv)
-{
-	if (of_property_read_bool(priv->pdev->dev.of_node,
-				  "wlan-ipa-disabled")) {
-		set_bit(ICNSS_IPA_DISABLED, &priv->device_config);
-	}
-}
-
 static inline void  icnss_get_smp2p_info(struct icnss_priv *priv)
 {
 
@@ -3997,6 +3982,16 @@ static void pil_restart_level_notifier(void *ignore,
 }
 #endif
 
+int wlan_pdr_open(struct inode *inode, struct file *filp)
+{
+	int minor = iminor(inode);
+	if (minor > 0)
+		return -ENXIO;
+
+	filp->private_data = penv;
+	return 0;
+}
+
 static int icnss_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -4037,8 +4032,6 @@ static int icnss_probe(struct platform_device *pdev)
 
 	icnss_init_control_params(priv);
 
-	icnss_read_device_configs(priv);
-
 	ret = icnss_resource_parse(priv);
 	if (ret)
 		goto out_reset_drvdata;
@@ -4064,6 +4057,7 @@ static int icnss_probe(struct platform_device *pdev)
 		goto smmu_cleanup;
 	}
 
+	init_waitqueue_head(&priv->wlan_pdr_debug_q);
 	INIT_WORK(&priv->event_work, icnss_driver_event_work);
 	INIT_LIST_HEAD(&priv->event_list);
 
@@ -4118,10 +4112,9 @@ static int icnss_probe(struct platform_device *pdev)
 #ifdef CONFIG_ICNSS2_RESTART_LEVEL_NOTIF
 		register_trace_pil_restart_level(pil_restart_level_notifier, NULL);
 #endif
-	} else {
-		timer_setup(&priv->recovery_timer,
-			    icnss_recovery_timeout_hdlr, 0);
 	}
+
+	chr_dev_init();
 
 	INIT_LIST_HEAD(&priv->icnss_tcdev_list);
 
@@ -4156,6 +4149,8 @@ static int icnss_remove(struct platform_device *pdev)
 		unregister_trace_pil_restart_level(pil_restart_level_notifier, NULL);
 #endif
 	}
+
+	chr_dev_term();
 
 	device_init_wakeup(&priv->pdev->dev, false);
 
@@ -4197,13 +4192,6 @@ static int icnss_remove(struct platform_device *pdev)
 	return 0;
 }
 
-void icnss_recovery_timeout_hdlr(struct timer_list *t)
-{
-	struct icnss_priv *priv = from_timer(priv, t, recovery_timer);
-
-	icnss_pr_err("Timeout waiting for FW Ready 0x%lx\n", priv->state);
-	ICNSS_ASSERT(0);
-}
 #ifdef CONFIG_PM_SLEEP
 static int icnss_pm_suspend(struct device *dev)
 {

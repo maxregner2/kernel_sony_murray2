@@ -25,6 +25,11 @@
  * Authors:
  *
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 /**
  * DOC: Overview
@@ -329,17 +334,8 @@ int drm_syncobj_find_fence(struct drm_file *file_private,
 
 	if (*fence) {
 		ret = dma_fence_chain_find_seqno(fence, point);
-		if (!ret) {
-			/* If the requested seqno is already signaled
-			 * drm_syncobj_find_fence may return a NULL
-			 * fence. To make sure the recipient gets
-			 * signalled, use a new fence instead.
-			 */
-			if (!*fence)
-				*fence = dma_fence_get_stub();
-
+		if (!ret)
 			goto out;
-		}
 		dma_fence_put(*fence);
 	} else {
 		ret = -EINVAL;

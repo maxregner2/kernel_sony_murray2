@@ -30,6 +30,11 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 #include <linux/acpi.h>
 #include <linux/of_platform.h>
 #include <linux/module.h>
@@ -279,9 +284,6 @@ static enum rdma_link_layer hns_roce_get_link_layer(struct ib_device *device,
 static int hns_roce_query_pkey(struct ib_device *ib_dev, u8 port, u16 index,
 			       u16 *pkey)
 {
-	if (index > 0)
-		return -EINVAL;
-
 	*pkey = PKEY_ID;
 
 	return 0;
@@ -362,7 +364,7 @@ static int hns_roce_mmap(struct ib_ucontext *context,
 		return rdma_user_mmap_io(context, vma,
 					 to_hr_ucontext(context)->uar.pfn,
 					 PAGE_SIZE,
-					 pgprot_device(vma->vm_page_prot));
+					 pgprot_noncached(vma->vm_page_prot));
 
 	/* vm_pgoff: 1 -- TPTR */
 	case 1:

@@ -6,6 +6,11 @@
  *
  * This file is released under the GPL.
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 #include <linux/completion.h>
 #include <linux/err.h>
@@ -2092,12 +2097,7 @@ static void *crypt_page_alloc(gfp_t gfp_mask, void *pool_data)
 	struct crypt_config *cc = pool_data;
 	struct page *page;
 
-	/*
-	 * Note, percpu_counter_read_positive() may over (and under) estimate
-	 * the current usage by at most (batch - 1) * num_online_cpus() pages,
-	 * but avoids potential spinlock contention of an exact result.
-	 */
-	if (unlikely(percpu_counter_read_positive(&cc->n_allocated_pages) >= dm_crypt_pages_per_client) &&
+	if (unlikely(percpu_counter_compare(&cc->n_allocated_pages, dm_crypt_pages_per_client) >= 0) &&
 	    likely(gfp_mask & __GFP_NORETRY))
 		return NULL;
 

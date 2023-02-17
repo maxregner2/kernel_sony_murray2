@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * net/sched/sch_api.c	Packet scheduler API.
@@ -508,12 +513,6 @@ static struct qdisc_size_table *qdisc_get_stab(struct nlattr *opt,
 			continue;
 		stab->refcnt++;
 		return stab;
-	}
-
-	if (s->size_log > STAB_SIZE_LOG_MAX ||
-	    s->cell_log > STAB_SIZE_LOG_MAX) {
-		NL_SET_ERR_MSG(extack, "Invalid logarithmic size of size table");
-		return ERR_PTR(-EINVAL);
 	}
 
 	stab = kmalloc(sizeof(*stab) + tsize * sizeof(u16), GFP_KERNEL);
@@ -1195,7 +1194,7 @@ static struct Qdisc *qdisc_create(struct net_device *dev,
 
 	err = -ENOENT;
 	if (!ops) {
-		NL_SET_ERR_MSG(extack, "Specified qdisc kind is unknown");
+		NL_SET_ERR_MSG(extack, "Specified qdisc not found");
 		goto err_out;
 	}
 

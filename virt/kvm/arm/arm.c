@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (C) 2012 - Virtual Open Systems and Columbia University
@@ -1140,14 +1145,6 @@ long kvm_arch_vcpu_ioctl(struct file *filp,
 		r = -EFAULT;
 		if (copy_from_user(&reg, argp, sizeof(reg)))
 			break;
-
-		/*
-		 * We could owe a reset due to PSCI. Handle the pending reset
-		 * here to ensure userspace register accesses are ordered after
-		 * the reset.
-		 */
-		if (kvm_check_request(KVM_REQ_VCPU_RESET, vcpu))
-			kvm_reset_vcpu(vcpu);
 
 		if (ioctl == KVM_SET_ONE_REG)
 			r = kvm_arm_set_reg(vcpu, &reg);

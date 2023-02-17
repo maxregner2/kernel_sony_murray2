@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0
 /*
  *    driver for Microsemi PQI-based storage controllers
@@ -1192,7 +1197,6 @@ static int pqi_get_raid_map(struct pqi_ctrl_info *ctrl_info,
 				"Requested %d bytes, received %d bytes",
 				raid_map_size,
 				get_unaligned_le32(&raid_map->structure_size));
-			rc = -EINVAL;
 			goto error;
 		}
 	}

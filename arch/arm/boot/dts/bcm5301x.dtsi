@@ -7,6 +7,11 @@
  *
  * Licensed under the GNU/GPL. See COPYING for details.
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 #include <dt-bindings/clock/bcm-nsp.h>
 #include <dt-bindings/gpio/gpio.h>
@@ -242,8 +247,6 @@
 
 			gpio-controller;
 			#gpio-cells = <2>;
-			interrupt-controller;
-			#interrupt-cells = <2>;
 		};
 
 		pcie0: pcie@12000 {
@@ -389,7 +392,7 @@
 	i2c0: i2c@18009000 {
 		compatible = "brcm,iproc-i2c";
 		reg = <0x18009000 0x50>;
-		interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		clock-frequency = <100000>;

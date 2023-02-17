@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2014 Anna Schumaker <Anna.Schumaker@Netapp.com>
@@ -295,9 +300,8 @@ static ssize_t _nfs42_proc_copy(struct file *src,
 			goto out;
 	}
 
-	WARN_ON_ONCE(invalidate_inode_pages2_range(dst_inode->i_mapping,
-					pos_dst >> PAGE_SHIFT,
-					(pos_dst + res->write_res.count - 1) >> PAGE_SHIFT));
+	truncate_pagecache_range(dst_inode, pos_dst,
+				 pos_dst + res->write_res.count);
 
 	status = res->write_res.count;
 out:

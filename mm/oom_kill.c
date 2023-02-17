@@ -314,9 +314,9 @@ static enum oom_constraint constrained_alloc(struct oom_control *oc)
 	return CONSTRAINT_NONE;
 }
 
-static int oom_evaluate_task(struct task_struct *task, void *arg)
+static int oom_evaluate_task(struct task_struct *task, const char __always_unused *message,
+			     struct oom_control *oc)
 {
-	struct oom_control *oc = arg;
 	long points;
 #ifdef CONFIG_PRIORITIZE_OOM_TASKS
 	struct task_struct *p;
@@ -397,15 +397,14 @@ static void select_bad_process(struct oom_control *oc)
 
 		rcu_read_lock();
 		for_each_process(p)
-			if (oom_evaluate_task(p, oc))
+			if (oom_evaluate_task(p, "select_bad_process", oc))
 				break;
 		rcu_read_unlock();
 	}
 }
 
-static int dump_task(struct task_struct *p, void *arg)
+static int dump_task(struct task_struct *p, const char *message, struct oom_control *oc)
 {
-	struct oom_control *oc = arg;
 	struct task_struct *task;
 
 	if (oom_unkillable_task(p))
@@ -425,12 +424,12 @@ static int dump_task(struct task_struct *p, void *arg)
 		return 0;
 	}
 
-	pr_info("[%7d] %5d %5d %8lu %8lu %8ld %8lu         %5hd %s\n",
+	pr_info("[%7d] %5d %5d %8lu %8lu %8ld %8lu         %5hd %s for %s\n",
 		task->pid, from_kuid(&init_user_ns, task_uid(task)),
 		task->tgid, task->mm->total_vm, get_mm_rss(task->mm),
 		mm_pgtables_bytes(task->mm),
 		get_mm_counter(task->mm, MM_SWAPENTS),
-		task->signal->oom_score_adj, task->comm);
+		task->signal->oom_score_adj, task->comm, message);
 	task_unlock(task);
 
 	return 0;
@@ -458,7 +457,7 @@ static void dump_tasks(struct oom_control *oc)
 
 		rcu_read_lock();
 		for_each_process(p)
-			dump_task(p, oc);
+			dump_task(p, "dump_task", oc);
 		rcu_read_unlock();
 	}
 }
@@ -896,7 +895,8 @@ static bool task_will_free_mem(struct task_struct *task)
 	return ret;
 }
 
-static void __oom_kill_process(struct task_struct *victim, const char *message)
+static void __oom_kill_process(struct task_struct *victim, const char *message,
+			       struct oom_control *oc)
 {
 	struct task_struct *p;
 	struct mm_struct *mm;
@@ -929,6 +929,18 @@ static void __oom_kill_process(struct task_struct *victim, const char *message)
 #ifdef CONFIG_PRIORITIZE_OOM_TASKS
 	panic_on_oom_timeout = 0;
 #endif
+	if (oc) {
+		trace_oom_sigkill(victim->pid,	victim->comm,
+				  oc->chosen_points,
+				  get_mm_rss(victim->mm),
+				  oc->gfp_mask);
+	} else {
+		trace_oom_sigkill(victim->pid,	victim->comm,
+				  0,
+				  get_mm_rss(victim->mm),
+				  0);
+	}
+
 	mark_oom_victim(victim);
 	pr_err("%s: Killed process %d (%s) total-vm:%lukB, anon-rss:%lukB, file-rss:%lukB, shmem-rss:%lukB, UID:%u pgtables:%lukB oom_score_adj:%hd\n",
 		message, task_pid_nr(victim), victim->comm, K(mm->total_vm),
@@ -984,12 +996,13 @@ static void __oom_kill_process(struct task_struct *victim, const char *message)
  * Kill provided task unless it's secured by setting
  * oom_score_adj to OOM_SCORE_ADJ_MIN.
  */
-static int oom_kill_memcg_member(struct task_struct *task, void *message)
+static int oom_kill_memcg_member(struct task_struct *task, const char *message,
+				 struct oom_control *oc)
 {
 	if (task->signal->oom_score_adj != OOM_SCORE_ADJ_MIN &&
 	    !is_global_init(task)) {
 		get_task_struct(task);
-		__oom_kill_process(task, message);
+		__oom_kill_process(task, message, oc);
 	}
 	return 0;
 }
@@ -1030,7 +1043,7 @@ static void oom_kill_process(struct oom_control *oc, const char *message)
 	 */
 	oom_group = mem_cgroup_get_oom_group(victim, oc->memcg);
 
-	__oom_kill_process(victim, message);
+	__oom_kill_process(victim, message, oc);
 
 	/*
 	 * If necessary, kill all tasks in the selected memory cgroup.
@@ -1214,15 +1227,19 @@ bool out_of_memory(struct oom_control *oc)
 }
 
 /*
- * The pagefault handler calls here because some allocation has failed. We have
- * to take care of the memcg OOM here because this is the only safe context without
- * any locks held but let the oom killer triggered from the allocation context care
- * about the global OOM.
+ * The pagefault handler calls here because it is out of memory, so kill a
+ * memory-hogging task. If oom_lock is held by somebody else, a parallel oom
+ * killing is already in progress so do nothing.
  */
 void pagefault_out_of_memory(void)
 {
-	static DEFINE_RATELIMIT_STATE(pfoom_rs, DEFAULT_RATELIMIT_INTERVAL,
-				      DEFAULT_RATELIMIT_BURST);
+	struct oom_control oc = {
+		.zonelist = NULL,
+		.nodemask = NULL,
+		.memcg = NULL,
+		.gfp_mask = 0,
+		.order = 0,
+	};
 
 	if (IS_ENABLED(CONFIG_HAVE_USERSPACE_LOW_MEMORY_KILLER))
 		return;
@@ -1230,11 +1247,10 @@ void pagefault_out_of_memory(void)
 	if (mem_cgroup_oom_synchronize(true))
 		return;
 
-	if (fatal_signal_pending(current))
+	if (!mutex_trylock(&oom_lock))
 		return;
-
-	if (__ratelimit(&pfoom_rs))
-		pr_warn("Huh VM_FAULT_OOM leaked out to the #PF handler. Retrying PF\n");
+	out_of_memory(&oc);
+	mutex_unlock(&oom_lock);
 }
 
 void add_to_oom_reaper(struct task_struct *p)

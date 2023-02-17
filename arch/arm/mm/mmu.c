@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  *  linux/arch/arm/mm/mmu.c
@@ -415,9 +420,9 @@ void __set_fixmap(enum fixed_addresses idx, phys_addr_t phys, pgprot_t prot)
 		     FIXADDR_END);
 	BUG_ON(idx >= __end_of_fixed_addresses);
 
-	/* We support only device mappings before pgprot_kernel is set. */
+	/* we only support device mappings until pgprot_kernel has been set */
 	if (WARN_ON(pgprot_val(prot) != pgprot_val(FIXMAP_PAGE_IO) &&
-		    pgprot_val(prot) && pgprot_val(pgprot_kernel) == 0))
+		    pgprot_val(pgprot_kernel) == 0))
 		return;
 
 	if (pgprot_val(prot))

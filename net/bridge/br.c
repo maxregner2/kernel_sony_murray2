@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  *	Generic parts
@@ -393,12 +398,6 @@ static void __exit br_deinit(void)
 #endif
 	br_fdb_fini();
 }
-
-#ifdef CONFIG_HYFI_BRIDGE_HOOKS
-/* Hook for bridge event notifications */
-br_notify_hook_t __rcu *br_notify_hook __read_mostly;
-EXPORT_SYMBOL(br_notify_hook);
-#endif
 
 module_init(br_init)
 module_exit(br_deinit)

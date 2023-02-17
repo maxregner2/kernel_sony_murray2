@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0
 #include <linux/ceph/ceph_debug.h>
 
@@ -514,6 +519,8 @@ struct inode *ceph_alloc_inode(struct super_block *sb)
 	memset(&ci->i_btime, '\0', sizeof(ci->i_btime));
 
 	ceph_fscache_inode_init(ci);
+
+	ci->i_meta_err = 0;
 
 	return &ci->vfs_inode;
 }

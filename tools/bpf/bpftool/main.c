@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
 /* Copyright (C) 2017-2018 Netronome Systems, Inc. */
 
@@ -361,8 +366,6 @@ int main(int argc, char **argv)
 		{ 0 }
 	};
 	int opt, ret;
-
-	setlinebuf(stdout);
 
 	last_do_help = do_help;
 	pretty_output = false;

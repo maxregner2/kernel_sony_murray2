@@ -24,6 +24,11 @@
  *    Keith Packard <keithp@keithp.com>
  *
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 #include <linux/export.h>
 #include <linux/i2c.h>
@@ -165,12 +170,6 @@ static void vlv_init_panel_power_sequencer(struct intel_encoder *encoder,
 static void vlv_steal_power_sequencer(struct drm_i915_private *dev_priv,
 				      enum pipe pipe);
 static void intel_dp_unset_edid(struct intel_dp *intel_dp);
-
-static void intel_dp_set_default_sink_rates(struct intel_dp *intel_dp)
-{
-	intel_dp->sink_rates[0] = 162000;
-	intel_dp->num_sink_rates = 1;
-}
 
 /* update sink rates from dpcd */
 static void intel_dp_set_sink_rates(struct intel_dp *intel_dp)
@@ -4267,9 +4266,6 @@ intel_edp_init_dpcd(struct intel_dp *intel_dp)
 	 */
 	intel_psr_init_dpcd(intel_dp);
 
-	/* Clear the default sink rates */
-	intel_dp->num_sink_rates = 0;
-
 	/* Read the eDP 1.4+ supported link rates. */
 	if (intel_dp->edp_dpcd[0] >= DP_EDP_14) {
 		__le16 sink_rates[DP_MAX_SUPPORTED_RATES];
@@ -7176,8 +7172,6 @@ intel_dp_init_connector(struct intel_digital_port *intel_dig_port,
 		return false;
 
 	intel_dp_set_source_rates(intel_dp);
-	intel_dp_set_default_sink_rates(intel_dp);
-	intel_dp_set_common_rates(intel_dp);
 
 	intel_dp->reset_link_params = true;
 	intel_dp->pps_pipe = INVALID_PIPE;

@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2020 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0
 /*
  * xHCI host controller driver
@@ -342,29 +347,16 @@ static void xhci_handle_stopped_cmd_ring(struct xhci_hcd *xhci,
 /* Must be called with xhci->lock held, releases and aquires lock back */
 static int xhci_abort_cmd_ring(struct xhci_hcd *xhci, unsigned long flags)
 {
-	struct xhci_segment *new_seg	= xhci->cmd_ring->deq_seg;
-	union xhci_trb *new_deq		= xhci->cmd_ring->dequeue;
-	u64 crcr;
+	u64 temp_64;
 	int ret;
 
 	xhci_dbg(xhci, "Abort command ring\n");
 
 	reinit_completion(&xhci->cmd_ring_stop_completion);
 
-	/*
-	 * The control bits like command stop, abort are located in lower
-	 * dword of the command ring control register.
-	 * Some controllers require all 64 bits to be written to abort the ring.
-	 * Make sure the upper dword is valid, pointing to the next command,
-	 * avoiding corrupting the command ring pointer in case the command ring
-	 * is stopped by the time the upper dword is written.
-	 */
-	next_trb(xhci, NULL, &new_seg, &new_deq);
-	if (trb_is_link(new_deq))
-		next_trb(xhci, NULL, &new_seg, &new_deq);
-
-	crcr = xhci_trb_virt_to_dma(new_seg, new_deq);
-	xhci_write_64(xhci, crcr | CMD_RING_ABORT, &xhci->op_regs->cmd_ring);
+	temp_64 = xhci_read_64(xhci, &xhci->op_regs->cmd_ring);
+	xhci_write_64(xhci, temp_64 | CMD_RING_ABORT,
+			&xhci->op_regs->cmd_ring);
 
 	/* Section 4.6.1.2 of xHCI 1.0 spec says software should also time the
 	 * completion of the Command Abort operation. If CRR is not negated in a
@@ -1271,6 +1263,7 @@ static void xhci_handle_cmd_disable_slot(struct xhci_hcd *xhci, int slot_id)
 	if (xhci->quirks & XHCI_EP_LIMIT_QUIRK)
 		/* Delete default control endpoint resources */
 		xhci_free_device_endpoint_resources(xhci, virt_dev, true);
+	xhci_free_virt_device(xhci, slot_id);
 }
 
 static void xhci_handle_cmd_config_ep(struct xhci_hcd *xhci, int slot_id,
@@ -2802,6 +2795,9 @@ static int xhci_handle_event(struct xhci_hcd *xhci)
 		break;
 	case TRB_TYPE(TRB_DEV_NOTE):
 		handle_device_notification(xhci, event);
+		break;
+	case TRB_TYPE(TRB_HC_EVENT):
+		/* no action to reduce error log */
 		break;
 	default:
 		if ((le32_to_cpu(event->event_cmd.flags) & TRB_TYPE_BITMASK) >=

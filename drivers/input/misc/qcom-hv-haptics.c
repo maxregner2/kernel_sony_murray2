@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/atomic.h>
@@ -891,12 +890,7 @@ static int haptics_get_status_data(struct haptics_chip *chip,
 	mod_sel_val[0] = sel & 0xff;
 	mod_sel_val[1] = (sel >> 8) & 0xff;
 	rc = haptics_write(chip, chip->cfg_addr_base,
-			HAP_CFG_MOD_STATUS_XT_V2_REG, &mod_sel_val[1], 1);
-	if (rc < 0)
-		return rc;
-
-	rc = haptics_write(chip, chip->cfg_addr_base,
-			HAP_CFG_MOD_STATUS_SEL_REG, mod_sel_val, 1);
+			HAP_CFG_MOD_STATUS_SEL_REG, mod_sel_val, 2);
 	if (rc < 0)
 		return rc;
 
@@ -1474,7 +1468,7 @@ static int haptics_open_loop_drive_config(struct haptics_chip *chip, bool en)
 	u8 val;
 
 	if ((is_boost_vreg_enabled_in_open_loop(chip) ||
-	     chip->hboost_enabled || is_haptics_external_powered(chip)) && en) {
+	     is_haptics_external_powered(chip)) && en) {
 		/* Force VREG_RDY */
 		rc = haptics_masked_write(chip, chip->cfg_addr_base,
 				HAP_CFG_VSET_CFG_REG, FORCE_VREG_RDY_BIT,
@@ -1818,16 +1812,12 @@ static int haptics_set_manual_rc_clk_cal(struct haptics_chip *chip)
 static int haptics_update_fifo_samples(struct haptics_chip *chip,
 					u8 *samples, u32 length)
 {
-	int rc = 0, count, i, remain;
-	u8 tmp[HAP_PTN_V2_FIFO_DIN_NUM] = {0};
+	int rc, count, i;
 
 	if (samples == NULL) {
 		dev_err(chip->dev, "no FIFO samples available\n");
 		return -EINVAL;
 	}
-
-	if (!length)
-		return 0;
 
 	if (chip->ptn_revision == HAP_PTN_V1) {
 		for (i = 0; i < length; i++) {
@@ -1837,7 +1827,6 @@ static int haptics_update_fifo_samples(struct haptics_chip *chip,
 		}
 	} else {
 		count = length / HAP_PTN_V2_FIFO_DIN_NUM;
-		remain = length % HAP_PTN_V2_FIFO_DIN_NUM;
 		for (i = 0; i < count; i++) {
 			rc = haptics_update_fifo_sample_v2(chip,
 					samples, HAP_PTN_V2_FIFO_DIN_NUM);
@@ -1847,26 +1836,16 @@ static int haptics_update_fifo_samples(struct haptics_chip *chip,
 			samples += HAP_PTN_V2_FIFO_DIN_NUM;
 		}
 
-		if (remain) {
-			/*
-			 * In HAP_PTN_V2 module, when 1-byte FIFO write clashes
-			 * with the HW FIFO read operation, the HW will only read
-			 * 1 valid byte in every 4 bytes FIFO samples. So avoid
-			 * this by keeping the samples 4-byte aligned and always
-			 * use 4-byte write for HAP_PTN_V2 module.
-			 */
-			if (chip->ptn_revision == HAP_PTN_V2) {
-				memcpy(tmp, samples, remain);
-				rc = haptics_update_fifo_sample_v2(chip,
-						tmp, HAP_PTN_V2_FIFO_DIN_NUM);
-			} else {
-				rc = haptics_update_fifo_sample_v2(chip,
-						samples, remain);
-			}
+		if (length % HAP_PTN_V2_FIFO_DIN_NUM) {
+			rc = haptics_update_fifo_sample_v2(chip,
+					samples,
+					length % HAP_PTN_V2_FIFO_DIN_NUM);
+			if (rc < 0)
+				return rc;
 		}
 	}
 
-	return rc;
+	return 0;
 }
 
 static int haptics_set_fifo_playrate(struct haptics_chip *chip,
@@ -1940,17 +1919,10 @@ static int haptics_toggle_module_enable(struct haptics_chip *chip)
 {
 	int rc;
 
-	/*
-	 * Updating HAPTICS_EN would vote hBoost enable status. Add 100us
-	 * delay before updating HAPTICS_EN for hBoost to have enough time
-	 * to handle its power transition.
-	 */
-	usleep_range(100, 101);
 	rc = haptics_module_enable(chip, false);
 	if (rc < 0)
 		return rc;
 
-	usleep_range(100, 101);
 	return haptics_module_enable(chip, true);
 }
 
@@ -1999,10 +1971,6 @@ static int haptics_set_fifo(struct haptics_chip *chip, struct fifo_cfg *fifo)
 		return available;
 
 	num = min_t(u32, available, num);
-	/* Keep the FIFO programming 4-byte aligned if FIFO refilling is needed */
-	if ((num < fifo->num_s) && (num % HAP_PTN_V2_FIFO_DIN_NUM))
-		num = round_down(num, HAP_PTN_V2_FIFO_DIN_NUM);
-
 	rc = haptics_update_fifo_samples(chip, fifo->samples, num);
 	if (rc < 0) {
 		dev_err(chip->dev, "write FIFO samples failed, rc=%d\n", rc);
@@ -2096,8 +2064,19 @@ static int haptics_load_predefined_effect(struct haptics_chip *chip,
 		return -EINVAL;
 
 	play->effect = effect;
+	if (play->pattern_src == FIFO) {
+		/* Toggle HAPTICS_EN for a clear start point of FIFO playing */
+		rc = haptics_toggle_module_enable(chip);
+		if (rc < 0)
+			return rc;
+	}
+
 	/* Clamp VMAX for different vibration strength */
 	rc = haptics_set_vmax_mv(chip, play->vmax_mv);
+	if (rc < 0)
+		return rc;
+
+	rc = haptics_enable_autores(chip, !play->effect->auto_res_disable);
 	if (rc < 0)
 		return rc;
 
@@ -2109,17 +2088,6 @@ static int haptics_load_predefined_effect(struct haptics_chip *chip,
 				play->pattern_src);
 		return -EINVAL;
 	}
-
-	if (play->pattern_src == FIFO) {
-		/* Toggle HAPTICS_EN for a clear start point of FIFO playing */
-		rc = haptics_toggle_module_enable(chip);
-		if (rc < 0)
-			return rc;
-	}
-
-	rc = haptics_enable_autores(chip, !play->effect->auto_res_disable);
-	if (rc < 0)
-		return rc;
 
 	play->brake = play->effect->brake;
 	/* Config brake settings if it's necessary */
@@ -2284,12 +2252,12 @@ static int haptics_load_custom_effect(struct haptics_chip *chip,
 	play->effect = chip->custom_effect;
 	play->brake = NULL;
 	play->vmax_mv = (magnitude * chip->custom_effect->vmax_mv) / 0x7fff;
-	rc = haptics_set_vmax_mv(chip, play->vmax_mv);
+	/* Toggle HAPTICS_EN for a clear start point of FIFO playing */
+	rc = haptics_toggle_module_enable(chip);
 	if (rc < 0)
 		goto cleanup;
 
-	/* Toggle HAPTICS_EN for a clear start point of FIFO playing */
-	rc = haptics_toggle_module_enable(chip);
+	rc = haptics_set_vmax_mv(chip, play->vmax_mv);
 	if (rc < 0)
 		goto cleanup;
 
@@ -2406,46 +2374,6 @@ static u8 get_direct_play_max_amplitude(struct haptics_chip *chip)
 	return (u8)amplitude;
 }
 
-static int haptics_stop_fifo_play(struct haptics_chip *chip)
-{
-	int rc;
-	u8 val;
-
-	if (atomic_read(&chip->play.fifo_status.is_busy) == 0) {
-		dev_dbg(chip->dev, "FIFO playing is not in progress\n");
-		return 0;
-	}
-
-	rc = haptics_enable_play(chip, false);
-	if (rc < 0)
-		return rc;
-
-	/* restore FIFO play rate back to T_LRA */
-	rc = haptics_set_fifo_playrate(chip, T_LRA);
-	if (rc < 0)
-		return rc;
-
-	haptics_fifo_empty_irq_config(chip, false);
-	kvfree(chip->custom_effect->fifo->samples);
-	chip->custom_effect->fifo->samples = NULL;
-
-	atomic_set(&chip->play.fifo_status.is_busy, 0);
-
-	/*
-	 * All other playing modes would use AUTO mode RC
-	 * calibration except FIFO streaming mode, so restore
-	 * back to AUTO RC calibration after FIFO playing.
-	 */
-	val = CAL_RC_CLK_AUTO_VAL << CAL_RC_CLK_SHIFT;
-	rc = haptics_masked_write(chip, chip->cfg_addr_base,
-			HAP_CFG_CAL_EN_REG, CAL_RC_CLK_MASK, val);
-	if (rc < 0)
-		return rc;
-
-	dev_dbg(chip->dev, "stopped FIFO playing successfully\n");
-	return 0;
-}
-
 static int haptics_upload_effect(struct input_dev *dev,
 		struct ff_effect *effect, struct ff_effect *old)
 {
@@ -2515,21 +2443,46 @@ static int haptics_upload_effect(struct input_dev *dev,
 		return rc;
 	}
 
-	rc = haptics_wait_hboost_ready(chip);
-	if (rc < 0 && chip->play.pattern_src == FIFO) {
-		/*
-		 * Call haptics_stop_fifo_play(chip) explicitly if hBoost is
-		 * not ready for the FIFO play. This drops current FIFO play
-		 * but it restores the SW back to initial status so that the
-		 * following FIFO play requests can still be served.
-		 */
-		dev_dbg(chip->dev, "stop FIFO play explicitly to restore SW status\n");
-		mutex_lock(&chip->play.lock);
-		haptics_stop_fifo_play(chip);
-		mutex_unlock(&chip->play.lock);
-		return rc;
+	return haptics_wait_hboost_ready(chip);
+}
+
+static int haptics_stop_fifo_play(struct haptics_chip *chip)
+{
+	int rc;
+	u8 val;
+
+	if (atomic_read(&chip->play.fifo_status.is_busy) == 0) {
+		dev_dbg(chip->dev, "FIFO playing is not in progress\n");
+		return 0;
 	}
 
+	rc = haptics_enable_play(chip, false);
+	if (rc < 0)
+		return rc;
+
+	/* restore FIFO play rate back to T_LRA */
+	rc = haptics_set_fifo_playrate(chip, T_LRA);
+	if (rc < 0)
+		return rc;
+
+	haptics_fifo_empty_irq_config(chip, false);
+	kvfree(chip->custom_effect->fifo->samples);
+	chip->custom_effect->fifo->samples = NULL;
+
+	atomic_set(&chip->play.fifo_status.is_busy, 0);
+
+	/*
+	 * All other playing modes would use AUTO mode RC
+	 * calibration except FIFO streaming mode, so restore
+	 * back to AUTO RC calibration after FIFO playing.
+	 */
+	val = CAL_RC_CLK_AUTO_VAL << CAL_RC_CLK_SHIFT;
+	rc = haptics_masked_write(chip, chip->cfg_addr_base,
+			HAP_CFG_CAL_EN_REG, CAL_RC_CLK_MASK, val);
+	if (rc < 0)
+		return rc;
+
+	dev_dbg(chip->dev, "stopped FIFO playing successfully\n");
 	return 0;
 }
 
@@ -2894,18 +2847,23 @@ static irqreturn_t fifo_empty_irq_handler(int irq, void *data)
 		if (num < 0)
 			goto unlock;
 
+		/*
+		 * With HAPTICS_PATTERN module revision 2.0 and above, if use
+		 * 1-byte write before 4-byte write, the hardware would insert
+		 * zeros in between to keep the FIFO samples 4-byte aligned, and
+		 * the inserted 0 values would cause HW stop driving hence spurs
+		 * will be seen on the haptics output. So only use 1-byte write
+		 * at the end of FIFO streaming.
+		 */
+		if (samples_left <= num)
+			num = samples_left;
+		else if ((chip->ptn_revision >= HAP_PTN_V2) &&
+				(num % HAP_PTN_V2_FIFO_DIN_NUM))
+			num -= (num % HAP_PTN_V2_FIFO_DIN_NUM);
+
 		samples = fifo->samples + status->samples_written;
 
-		/*
-		 * Always use 4-byte burst write in the middle of FIFO programming to
-		 * avoid HW padding zeros during 1-byte write which would cause the HW
-		 * stop driving for the unexpected padding zeros.
-		 */
-		if (num < samples_left)
-			num = round_down(num, HAP_PTN_V2_FIFO_DIN_NUM);
-		else
-			num = samples_left;
-
+		/* Write more pattern data into FIFO memory. */
 		rc = haptics_update_fifo_samples(chip, samples, num);
 		if (rc < 0) {
 			dev_err(chip->dev, "Update FIFO samples failed, rc=%d\n",

@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * DaVinci Ethernet Medium Access Controller
@@ -412,20 +417,8 @@ static int emac_set_coalesce(struct net_device *ndev,
 	u32 int_ctrl, num_interrupts = 0;
 	u32 prescale = 0, addnl_dvdr = 1, coal_intvl = 0;
 
-	if (!coal->rx_coalesce_usecs) {
-		priv->coal_intvl = 0;
-
-		switch (priv->version) {
-		case EMAC_VERSION_2:
-			emac_ctrl_write(EMAC_DM646X_CMINTCTRL, 0);
-			break;
-		default:
-			emac_ctrl_write(EMAC_CTRL_EWINTTCNT, 0);
-			break;
-		}
-
-		return 0;
-	}
+	if (!coal->rx_coalesce_usecs)
+		return -EINVAL;
 
 	coal_intvl = coal->rx_coalesce_usecs;
 

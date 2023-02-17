@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Gadget Function Driver for Android USB accessories
  *
@@ -14,6 +13,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
  */
 
 /* #define DEBUG */
@@ -143,37 +147,21 @@ static struct usb_interface_descriptor acc_interface_desc = {
 	.bInterfaceProtocol     = 0,
 };
 
-static struct usb_endpoint_descriptor acc_superspeedplus_in_desc = {
-	.bLength                = USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType        = USB_DT_ENDPOINT,
-	.bEndpointAddress       = USB_DIR_IN,
-	.bmAttributes           = USB_ENDPOINT_XFER_BULK,
-	.wMaxPacketSize         = cpu_to_le16(1024),
-};
-
-static struct usb_endpoint_descriptor acc_superspeedplus_out_desc = {
-	.bLength                = USB_DT_ENDPOINT_SIZE,
-	.bDescriptorType        = USB_DT_ENDPOINT,
-	.bEndpointAddress       = USB_DIR_OUT,
-	.bmAttributes           = USB_ENDPOINT_XFER_BULK,
-	.wMaxPacketSize         = cpu_to_le16(1024),
-};
-
-static struct usb_ss_ep_comp_descriptor acc_superspeedplus_comp_desc = {
-	.bLength                = sizeof(acc_superspeedplus_comp_desc),
-	.bDescriptorType        = USB_DT_SS_ENDPOINT_COMP,
-
-	/* the following 2 values can be tweaked if necessary */
-	/* .bMaxBurst =         0, */
-	/* .bmAttributes =      0, */
-};
-
 static struct usb_endpoint_descriptor acc_superspeed_in_desc = {
 	.bLength                = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType        = USB_DT_ENDPOINT,
 	.bEndpointAddress       = USB_DIR_IN,
 	.bmAttributes           = USB_ENDPOINT_XFER_BULK,
 	.wMaxPacketSize         = cpu_to_le16(1024),
+};
+
+static struct usb_ss_ep_comp_descriptor acc_superspeed_in_comp_desc = {
+	.bLength =		sizeof(acc_superspeed_in_comp_desc),
+	.bDescriptorType =	USB_DT_SS_ENDPOINT_COMP,
+
+	/* the following 2 values can be tweaked if necessary */
+	/* .bMaxBurst =		0, */
+	/* .bmAttributes =	0, */
 };
 
 static struct usb_endpoint_descriptor acc_superspeed_out_desc = {
@@ -184,14 +172,15 @@ static struct usb_endpoint_descriptor acc_superspeed_out_desc = {
 	.wMaxPacketSize         = cpu_to_le16(1024),
 };
 
-static struct usb_ss_ep_comp_descriptor acc_superspeed_comp_desc = {
-	.bLength                = sizeof(acc_superspeed_comp_desc),
-	.bDescriptorType        = USB_DT_SS_ENDPOINT_COMP,
+static struct usb_ss_ep_comp_descriptor acc_superspeed_out_comp_desc = {
+	.bLength =		sizeof(acc_superspeed_out_comp_desc),
+	.bDescriptorType =	USB_DT_SS_ENDPOINT_COMP,
 
 	/* the following 2 values can be tweaked if necessary */
-	/* .bMaxBurst =         0, */
-	/* .bmAttributes =      0, */
+	/* .bMaxBurst =		0, */
+	/* .bmAttributes =	0, */
 };
+
 
 static struct usb_endpoint_descriptor acc_highspeed_in_desc = {
 	.bLength                = USB_DT_ENDPOINT_SIZE,
@@ -240,18 +229,9 @@ static struct usb_descriptor_header *hs_acc_descs[] = {
 static struct usb_descriptor_header *ss_acc_descs[] = {
 	(struct usb_descriptor_header *) &acc_interface_desc,
 	(struct usb_descriptor_header *) &acc_superspeed_in_desc,
-	(struct usb_descriptor_header *) &acc_superspeed_comp_desc,
+	(struct usb_descriptor_header *) &acc_superspeed_in_comp_desc,
 	(struct usb_descriptor_header *) &acc_superspeed_out_desc,
-	(struct usb_descriptor_header *) &acc_superspeed_comp_desc,
-	NULL,
-};
-
-static struct usb_descriptor_header *ssp_acc_descs[] = {
-	(struct usb_descriptor_header *) &acc_interface_desc,
-	(struct usb_descriptor_header *) &acc_superspeedplus_in_desc,
-	(struct usb_descriptor_header *) &acc_superspeedplus_comp_desc,
-	(struct usb_descriptor_header *) &acc_superspeedplus_out_desc,
-	(struct usb_descriptor_header *) &acc_superspeedplus_comp_desc,
+	(struct usb_descriptor_header *) &acc_superspeed_out_comp_desc,
 	NULL,
 };
 
@@ -871,7 +851,8 @@ static long acc_ioctl(struct file *fp, unsigned code, unsigned long value)
 	case ACCESSORY_IS_START_REQUESTED:
 		return dev->start_requested;
 	case ACCESSORY_GET_AUDIO_MODE:
-		return dev->audio_mode;
+		/* RID006975: Disable support for AOA v2 Audio due to Andorid CDD */
+		return 0;
 	}
 	if (!src)
 		return -EINVAL;
@@ -923,7 +904,6 @@ static const struct file_operations acc_fops = {
 	.read = acc_read,
 	.write = acc_write,
 	.unlocked_ioctl = acc_ioctl,
-	.compat_ioctl = acc_ioctl,
 	.open = acc_open,
 	.release = acc_release,
 };
@@ -1117,22 +1097,20 @@ __acc_function_bind(struct usb_configuration *c,
 		return ret;
 
 	/* support high speed hardware */
-	acc_highspeed_in_desc.bEndpointAddress =
-		acc_fullspeed_in_desc.bEndpointAddress;
-	acc_highspeed_out_desc.bEndpointAddress =
-		acc_fullspeed_out_desc.bEndpointAddress;
+	if (gadget_is_dualspeed(c->cdev->gadget)) {
+		acc_highspeed_in_desc.bEndpointAddress =
+			acc_fullspeed_in_desc.bEndpointAddress;
+		acc_highspeed_out_desc.bEndpointAddress =
+			acc_fullspeed_out_desc.bEndpointAddress;
+	}
 
 	/* support super speed hardware */
-	acc_superspeed_in_desc.bEndpointAddress =
-		acc_fullspeed_in_desc.bEndpointAddress;
-	acc_superspeed_out_desc.bEndpointAddress =
-		acc_fullspeed_out_desc.bEndpointAddress;
-
-	/* support super speed plus hardware */
-	acc_superspeedplus_in_desc.bEndpointAddress =
-		acc_fullspeed_in_desc.bEndpointAddress;
-	acc_superspeedplus_out_desc.bEndpointAddress =
-		acc_fullspeed_out_desc.bEndpointAddress;
+	if (gadget_is_superspeed(c->cdev->gadget)) {
+		acc_superspeed_in_desc.bEndpointAddress =
+			acc_fullspeed_in_desc.bEndpointAddress;
+		acc_superspeed_out_desc.bEndpointAddress =
+			acc_fullspeed_out_desc.bEndpointAddress;
+	}
 
 	DBG(cdev, "%s speed %s: IN/%s, OUT/%s\n",
 			gadget_is_dualspeed(c->cdev->gadget) ? "dual" : "full",
@@ -1516,7 +1494,6 @@ static struct usb_function *acc_alloc(struct usb_function_instance *fi)
 	dev->function.fs_descriptors = fs_acc_descs;
 	dev->function.hs_descriptors = hs_acc_descs;
 	dev->function.ss_descriptors = ss_acc_descs;
-	dev->function.ssp_descriptors = ssp_acc_descs;
 	dev->function.bind = acc_function_bind_configfs;
 	dev->function.unbind = acc_function_unbind;
 	dev->function.set_alt = acc_function_set_alt;

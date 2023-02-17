@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-or-later
 /****************************************************************************
  *
@@ -550,7 +555,7 @@ static int write_packet(struct usb_device *udev,
 			       0,	/* index */
 			       buf,	/* buffer */
 			       size,
-			       1000);
+			       HZ);
 
 	kfree(buf);
 	return ret;
@@ -582,7 +587,7 @@ static int read_packet(struct usb_device *udev,
 			       0,	/* index */
 			       buf,	/* buffer */
 			       size,
-			       1000);
+			       HZ);
 
 	if (ret >= 0)
 		memcpy(registers, buf, size);

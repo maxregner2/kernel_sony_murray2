@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * CAN driver for PEAK System PCAN-USB FD / PCAN-USB Pro FD adapter
@@ -551,10 +556,11 @@ static int pcan_usb_fd_decode_status(struct pcan_usb_fd_if *usb_if,
 	} else if (sm->channel_p_w_b & PUCAN_BUS_WARNING) {
 		new_state = CAN_STATE_ERROR_WARNING;
 	} else {
-		/* back to (or still in) ERROR_ACTIVE state */
-		new_state = CAN_STATE_ERROR_ACTIVE;
+		/* no error bit (so, no error skb, back to active state) */
+		dev->can.state = CAN_STATE_ERROR_ACTIVE;
 		pdev->bec.txerr = 0;
 		pdev->bec.rxerr = 0;
+		return 0;
 	}
 
 	/* state hasn't changed */

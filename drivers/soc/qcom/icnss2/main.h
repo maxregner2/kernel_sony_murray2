@@ -1,5 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
+/*
  * Copyright (c) 2017-2020, 2021, The Linux Foundation.
  * All rights reserved.
  */
@@ -18,7 +23,7 @@
 #include <soc/qcom/service-locator.h>
 #include <soc/qcom/service-notifier.h>
 #include "wlan_firmware_service_v01.h"
-#include <linux/timer.h>
+#include <soc/qcom/subsystem_restart.h>
 
 #define WCN6750_DEVICE_ID 0x6750
 #define ADRASTEA_DEVICE_ID 0xabcd
@@ -462,12 +467,13 @@ struct icnss_priv {
 	struct mutex tcdev_lock;
 	bool is_chain1_supported;
 	bool chain_reg_info_updated;
+	char crash_reason[SUBSYS_CRASH_REASON_LEN];
+	wait_queue_head_t wlan_pdr_debug_q;
+	int data_ready;
 	u32 hw_trc_override;
 	struct icnss_dms_data dms;
 	u8 use_nv_mac;
 	u32 wlan_en_delay_ms;
-	unsigned long device_config;
-	struct timer_list recovery_timer;
 };
 
 struct icnss_reg_info {
@@ -495,6 +501,5 @@ int icnss_get_cpr_info(struct icnss_priv *priv);
 int icnss_update_cpr_info(struct icnss_priv *priv);
 void icnss_add_fw_prefix_name(struct icnss_priv *priv, char *prefix_name,
 			      char *name);
-void icnss_recovery_timeout_hdlr(struct timer_list *t);
 #endif
 

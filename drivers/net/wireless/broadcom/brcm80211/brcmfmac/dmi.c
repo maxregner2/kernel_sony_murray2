@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: ISC
 /*
  * Copyright 2018 Hans de Goede <hdegoede@redhat.com>
@@ -73,16 +78,6 @@ static const struct dmi_system_id dmi_platform_data[] = {
 			/* also match on somewhat unique bios-version */
 			DMI_EXACT_MATCH(DMI_BIOS_VERSION, "1.000"),
 		},
-		.driver_data = (void *)&acepc_t8_data,
-	},
-	{
-		/* Cyberbook T116 rugged tablet */
-		.matches = {
-			DMI_EXACT_MATCH(DMI_BOARD_VENDOR, "Default string"),
-			DMI_EXACT_MATCH(DMI_BOARD_NAME, "Cherry Trail CR"),
-			DMI_EXACT_MATCH(DMI_PRODUCT_SKU, "20170531"),
-		},
-		/* The factory image nvram file is identical to the ACEPC T8 one */
 		.driver_data = (void *)&acepc_t8_data,
 	},
 	{

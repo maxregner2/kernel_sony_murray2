@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * SMP support for ppc.
@@ -581,36 +586,6 @@ void crash_send_ipi(void (*crash_ipi_callback)(struct pt_regs *))
 	}
 }
 #endif
-
-#ifdef CONFIG_NMI_IPI
-static void crash_stop_this_cpu(struct pt_regs *regs)
-#else
-static void crash_stop_this_cpu(void *dummy)
-#endif
-{
-	/*
-	 * Just busy wait here and avoid marking CPU as offline to ensure
-	 * register data is captured appropriately.
-	 */
-	while (1)
-		cpu_relax();
-}
-
-void crash_smp_send_stop(void)
-{
-	static bool stopped = false;
-
-	if (stopped)
-		return;
-
-	stopped = true;
-
-#ifdef CONFIG_NMI_IPI
-	smp_send_nmi_ipi(NMI_IPI_ALL_OTHERS, crash_stop_this_cpu, 1000000);
-#else
-	smp_call_function(crash_stop_this_cpu, NULL, 0);
-#endif /* CONFIG_NMI_IPI */
-}
 
 #ifdef CONFIG_NMI_IPI
 static void nmi_stop_this_cpu(struct pt_regs *regs)
@@ -1326,12 +1301,10 @@ void start_secondary(void *unused)
 	BUG();
 }
 
-#ifdef CONFIG_PROFILING
 int setup_profiling_timer(unsigned int multiplier)
 {
 	return 0;
 }
-#endif
 
 #ifdef CONFIG_SCHED_SMT
 /* cpumask of CPUs with asymetric SMT dependancy */

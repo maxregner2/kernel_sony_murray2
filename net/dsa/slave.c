@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * net/dsa/slave.c - Slave device handling
@@ -1327,11 +1332,13 @@ static int dsa_slave_phy_setup(struct net_device *slave_dev)
 		 * use the switch internal MDIO bus instead
 		 */
 		ret = dsa_slave_phy_connect(slave_dev, dp->index);
-	}
-	if (ret) {
-		netdev_err(slave_dev, "failed to connect to PHY: %pe\n",
-			   ERR_PTR(ret));
-		phylink_destroy(dp->pl);
+		if (ret) {
+			netdev_err(slave_dev,
+				   "failed to connect to port %d: %d\n",
+				   dp->index, ret);
+			phylink_destroy(dp->pl);
+			return ret;
+		}
 	}
 
 	return ret;

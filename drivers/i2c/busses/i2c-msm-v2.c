@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2014-2019, 2020-2021 The Linux Foundation. All rights reserved.
@@ -2488,9 +2493,8 @@ static int i2c_msm_rsrcs_irq_init(struct platform_device *pdev,
 		return irq;
 	}
 
-	ret = request_irq(irq, i2c_msm_qup_isr,
-			IRQF_TRIGGER_HIGH | IRQF_EARLY_RESUME | IRQF_NO_SUSPEND,
-			"i2c-msm-v2-irq", ctrl);
+	ret = request_irq(irq, i2c_msm_qup_isr, IRQF_TRIGGER_HIGH | IRQF_EARLY_RESUME,
+						"i2c-msm-v2-irq", ctrl);
 	if (ret) {
 		dev_err(ctrl->dev, "error request_irq(irq_num:%d ) ret:%d\n",
 								irq, ret);

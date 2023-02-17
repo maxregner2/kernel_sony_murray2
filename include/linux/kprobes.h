@@ -1,4 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 #ifndef _LINUX_KPROBES_H
 #define _LINUX_KPROBES_H
 /*
@@ -154,8 +159,6 @@ struct kretprobe {
 	struct hlist_head free_instances;
 	raw_spinlock_t lock;
 };
-
-#define KRETPROBE_MAX_DATA_SIZE	4096
 
 struct kretprobe_instance {
 	struct hlist_node hlist;

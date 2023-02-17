@@ -449,7 +449,7 @@ config MMC_OMAP_HS
 
 config MMC_WBSD
 	tristate "Winbond W83L51xD SD/MMC Card Interface support"
-	depends on ISA_DMA_API && !M68K
+	depends on ISA_DMA_API
 	help
 	  This selects the Winbond(R) W83L51xD Secure digital and
 	  Multimedia card Interface.
@@ -499,6 +499,14 @@ config MMC_SDHCI_MSM
 	  If you have a controller with this interface, say Y or M here.
 
 	  If unsure, say N.
+
+config MMC_ENABLE_CLK_SCALE
+	bool "Clock Scaling of SDHCI support"
+	depends on MMC_SDHCI_MSM
+	default n
+	help
+	  This selects support for the SD/MMC Host Controller on
+	  Clock Scaling.
 
 config MMC_MXC
 	tristate "Freescale i.MX21/27/31 or MPC512x Multimedia Card support"

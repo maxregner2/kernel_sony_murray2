@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0
 /*
  * Analog Devices AD7768-1 SPI ADC driver
@@ -470,8 +475,8 @@ static irqreturn_t ad7768_trigger_handler(int irq, void *p)
 	iio_push_to_buffers_with_timestamp(indio_dev, &st->data.scan,
 					   iio_get_time_ns(indio_dev));
 
-err_unlock:
 	iio_trigger_notify_done(indio_dev->trig);
+err_unlock:
 	mutex_unlock(&st->lock);
 
 	return IRQ_HANDLED;

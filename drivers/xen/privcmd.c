@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /******************************************************************************
  * privcmd.c
@@ -810,12 +815,11 @@ static long privcmd_ioctl_mmap_resource(struct file *file,
 		unsigned int domid =
 			(xdata.flags & XENMEM_rsrc_acq_caller_owned) ?
 			DOMID_SELF : kdata.dom;
-		int num, *errs = (int *)pfns;
+		int num;
 
-		BUILD_BUG_ON(sizeof(*errs) > sizeof(*pfns));
 		num = xen_remap_domain_mfn_array(vma,
 						 kdata.addr & PAGE_MASK,
-						 pfns, kdata.num, errs,
+						 pfns, kdata.num, (int *)pfns,
 						 vma->vm_page_prot,
 						 domid,
 						 vma->vm_private_data);
@@ -825,7 +829,7 @@ static long privcmd_ioctl_mmap_resource(struct file *file,
 			unsigned int i;
 
 			for (i = 0; i < num; i++) {
-				rc = errs[i];
+				rc = pfns[i];
 				if (rc < 0)
 					break;
 			}

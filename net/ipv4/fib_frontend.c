@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * INET		An implementation of the TCP/IP protocol suite for the LINUX
@@ -1588,7 +1593,7 @@ static int __net_init fib_net_init(struct net *net)
 	int error;
 
 #ifdef CONFIG_IP_ROUTE_CLASSID
-	atomic_set(&net->ipv4.fib_num_tclassid_users, 0);
+	net->ipv4.fib_num_tclassid_users = 0;
 #endif
 	error = ip_fib_net_init(net);
 	if (error < 0)

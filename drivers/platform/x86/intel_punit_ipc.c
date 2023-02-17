@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0
 /*
  * Driver for the Intel P-Unit Mailbox IPC mechanism
@@ -8,6 +13,7 @@
  * which provide mailbox interface for power management usage.
  */
 
+#include <linux/acpi.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
 #include <linux/device.h>
@@ -334,7 +340,7 @@ static struct platform_driver intel_punit_ipc_driver = {
 	.remove = intel_punit_ipc_remove,
 	.driver = {
 		.name = "intel_punit_ipc",
-		.acpi_match_table = punit_ipc_acpi_ids,
+		.acpi_match_table = ACPI_PTR(punit_ipc_acpi_ids),
 	},
 };
 

@@ -113,6 +113,11 @@
  *     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  *     THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 #ifndef __XGBE_COMMON_H__
 #define __XGBE_COMMON_H__
@@ -1331,10 +1336,6 @@
 #define MDIO_VEND2_PMA_CDR_CONTROL	0x8056
 #endif
 
-#ifndef MDIO_VEND2_PMA_MISC_CTRL0
-#define MDIO_VEND2_PMA_MISC_CTRL0	0x8090
-#endif
-
 #ifndef MDIO_CTRL1_SPEED1G
 #define MDIO_CTRL1_SPEED1G		(MDIO_CTRL1_SPEED10G & ~BMCR_SPEED100)
 #endif
@@ -1392,10 +1393,6 @@
 #define XGBE_PMA_RX_RST_0_MASK		BIT(4)
 #define XGBE_PMA_RX_RST_0_RESET_ON	0x10
 #define XGBE_PMA_RX_RST_0_RESET_OFF	0x00
-
-#define XGBE_PMA_PLL_CTRL_MASK		BIT(15)
-#define XGBE_PMA_PLL_CTRL_ENABLE	BIT(15)
-#define XGBE_PMA_PLL_CTRL_DISABLE	0x0000
 
 /* Bit setting and getting macros
  *  The get macro will extract the current bit field value from within

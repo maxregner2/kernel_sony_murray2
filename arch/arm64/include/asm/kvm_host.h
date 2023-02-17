@@ -1,5 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
+/*
  * Copyright (C) 2012,2013 - ARM Ltd
  * Author: Marc Zyngier <marc.zyngier@arm.com>
  *
@@ -683,10 +688,5 @@ bool kvm_arm_vcpu_is_finalized(struct kvm_vcpu *vcpu);
 	((vcpu)->arch.flags & KVM_ARM64_VCPU_SVE_FINALIZED)
 
 #define kvm_arm_vcpu_loaded(vcpu)	((vcpu)->arch.sysregs_loaded_on_cpu)
-
-static inline enum mitigation_state kvm_arm_get_spectre_bhb_state(void)
-{
-	return arm64_get_spectre_bhb_state();
-}
 
 #endif /* __ARM64_KVM_HOST_H__ */

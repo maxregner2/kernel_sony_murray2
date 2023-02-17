@@ -3,6 +3,11 @@
  *
  * This file is released under the GPL.
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 #include "dm-btree.h"
 #include "dm-btree-internal.h"
@@ -423,9 +428,9 @@ static int rebalance_children(struct shadow_spine *s,
 
 		memcpy(n, dm_block_data(child),
 		       dm_bm_block_size(dm_tm_get_bm(info->tm)));
+		dm_tm_unlock(info->tm, child);
 
 		dm_tm_dec(info->tm, dm_block_location(child));
-		dm_tm_unlock(info->tm, child);
 		return 0;
 	}
 

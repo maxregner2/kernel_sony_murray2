@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  *  thinkpad_acpi.c - ThinkPad ACPI Extras
@@ -1186,6 +1191,15 @@ static int tpacpi_rfk_update_swstate(const struct tpacpi_rfk *tp_rfk)
 			    (status == TPACPI_RFK_RADIO_OFF));
 
 	return status;
+}
+
+/* Query FW and update rfkill sw state for all rfkill switches */
+static void tpacpi_rfk_update_swstate_all(void)
+{
+	unsigned int i;
+
+	for (i = 0; i < TPACPI_RFK_SW_MAX; i++)
+		tpacpi_rfk_update_swstate(tpacpi_rfkill_switches[i]);
 }
 
 /*
@@ -3125,6 +3139,9 @@ static void tpacpi_send_radiosw_update(void)
 	/* Sync hw blocking state first if it is hw-blocked */
 	if (wlsw == TPACPI_RFK_RADIO_OFF)
 		tpacpi_rfk_update_hwblock_state(true);
+
+	/* Sync sw blocking state */
+	tpacpi_rfk_update_swstate_all();
 
 	/* Sync hw blocking state last if it is hw-unblocked */
 	if (wlsw == TPACPI_RFK_RADIO_ON)
@@ -9074,7 +9091,7 @@ static int fan_write_cmd_level(const char *cmd, int *rc)
 
 	if (strlencmp(cmd, "level auto") == 0)
 		level = TP_EC_FAN_AUTO;
-	else if ((strlencmp(cmd, "level disengaged") == 0) ||
+	else if ((strlencmp(cmd, "level disengaged") == 0) |
 			(strlencmp(cmd, "level full-speed") == 0))
 		level = TP_EC_FAN_FULLSPEED;
 	else if (sscanf(cmd, "level %d", &level) != 1)

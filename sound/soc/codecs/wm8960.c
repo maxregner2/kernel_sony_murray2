@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2021 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * wm8960.c  --  WM8960 ALSA SoC Audio driver
@@ -752,16 +757,9 @@ static int wm8960_configure_clocking(struct snd_soc_component *component)
 	int i, j, k;
 	int ret;
 
-	/*
-	 * For Slave mode clocking should still be configured,
-	 * so this if statement should be removed, but some platform
-	 * may not work if the sysclk is not configured, to avoid such
-	 * compatible issue, just add '!wm8960->sysclk' condition in
-	 * this if statement.
-	 */
-	if (!(iface1 & (1 << 6)) && !wm8960->sysclk) {
-		dev_warn(component->dev,
-			 "slave mode, but proceeding with no clock configuration\n");
+	if (!(iface1 & (1<<6))) {
+		dev_dbg(component->dev,
+			"Codec is slave mode, no need to configure clock\n");
 		return 0;
 	}
 
