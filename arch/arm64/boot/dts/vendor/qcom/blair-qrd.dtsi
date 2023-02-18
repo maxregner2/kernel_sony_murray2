@@ -2,8 +2,8 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/linux-event-codes.h>
 #include "holi-pmic-overlay-pm6125.dtsi"
-#include "display/holi-sde-display-qrd-pm6125.dtsi"
-#include "display/blair-sde-display-qrd.dtsi"
+#include "../display/holi-sde-display-qrd-pm6125.dtsi"
+#include "../display/blair-sde-display-qrd.dtsi"
 #include "holi-thermal-overlay-pm6125.dtsi"
 #include "blair-fingerprint.dtsi"
 #include "sm5038.dtsi"
@@ -361,5 +361,5 @@
 	};
 };
 
-#include "camera/blair-camera-sensor-qrd.dtsi"
-#include "camera/wl2868c.dtsi"
+#include "../camera/blair-camera-sensor-qrd.dtsi"
+#include "../camera/wl2868c.dtsi"
