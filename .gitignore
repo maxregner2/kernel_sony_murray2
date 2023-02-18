@@ -154,3 +154,6 @@ arch/*/configs/vendor/*_defconfig
 #Ignoring Android.bp link file
 #
 Android.bp
+
+# Ignore output folder
+/out/
